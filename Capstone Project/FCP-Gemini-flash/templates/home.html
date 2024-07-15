@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 800px;
+            padding: 20px;
+            background-color: white;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            margin-top: 20px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+
+        .logout-btn {
+            margin-bottom: 20px;
+            background-color: #d9534f;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .logout-btn:hover {
+            background-color: #c9302c;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        table,
+        th,
+        td {
+            border: 1px solid #ddd;
+        }
+
+        th,
+        td {
+            padding: 8px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        .recommendation {
+            margin-bottom: 20px;
+            border: 1px solid #ddd;
+            padding: 10px;
+            border-radius: 5px;
+        }
+
+        .recommendation-input {
+            margin-bottom: 10px;
+        }
+
+        .recommendation-output {
+            margin-top: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <button class="logout-btn" onclick="logout()">Logout</button>
+        <h1>Home</h1>
+        <div id="csv-info">
+            <h2>CSV Information</h2>
+            <p><strong>Columns:</strong> Date,Time,Appliance,Energy_Consumption,Room,Status,Temperature,Weather_Condition,Number_of_People,</p>
+            <p>Activity,Season,Energy_Rating,Usage_Duration,Appliance_Wattage</p>
+            <p><strong>Example rows:</strong></p>
+            <ul>
+                <li>2024-01-01, 00:00, Refrigerator, 1.2, Kitchen, On, 5, Clear, 2, Sleeping, Winter, A, 24, 150</li>
+                <li>2024-01-01, 09:00, TV, 0.8, Living Room, On, 4, Cloudy, 4, Watching TV, Winter, B, 4, 100</li>
+                <li>2024-01-01, 18:00, Light, 0.1, Kitchen, On, 4, Cloudy, 4, Dinner, Winter, D, 2, 60</li>
+            </ul>
+        </div>
+        <form id="question-form">
+            <label for="question">Ask a question:</label>
+            <input type="text" id="question" name="question" required>
+            <input type="submit" value="Submit">
+        </form>
+        <table id="response-table">
+            <thead>
+                <tr>
+                    <th>Answer</th>
+                    <th>Coordinates</th>
+                    <th>Cells</th>
+                    <th>Aggregator</th>
+                </tr>
+            </thead>
+            <tbody>
+            </tbody>
+        </table>
+        <hr>
+        <h2>Energy Saving Recommendations</h2>
+        <form id="recommend-form">
+            <label for="text">Describe your situation:</label>
+            <input type="text" id="text" name="text" required>
+            <input type="submit" value="Get Recommendations">
+        </form>
+        <div id="recommendations-list">
+            <!-- Recommendations will be dynamically added here -->
+        </div>
+    </div>
+    <script>
+        document.getElementById('question-form').addEventListener('submit', function (event) {
+            event.preventDefault();
+            const question = document.getElementById('question').value;
+
+            fetch('/ask', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ question })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    const tableBody = document.getElementById('response-table').getElementsByTagName('tbody')[0];
+                    const newRow = tableBody.insertRow();
+
+                    const answerCell = newRow.insertCell(0);
+                    const coordinatesCell = newRow.insertCell(1);
+                    const cellsCell = newRow.insertCell(2);
+                    const aggregatorCell = newRow.insertCell(3);
+
+                    answerCell.textContent = data.answer;
+                    coordinatesCell.textContent = JSON.stringify(data.coordinates);
+                    cellsCell.textContent = data.cells.join(", ");
+                    aggregatorCell.textContent = data.aggregator;
+                })
+                .catch(error => console.error('Error:', error));
+        });
+
+        document.getElementById('recommend-form').addEventListener('submit', function (event) {
+            event.preventDefault();
+            const text = document.getElementById('text').value;
+
+            fetch('/recommend', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ text })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    const recommendationsList = document.getElementById('recommendations-list');
+
+                    const recommendationDiv = document.createElement('div');
+                    recommendationDiv.classList.add('recommendation');
+
+                    const inputPara = document.createElement('p');
+                    inputPara.classList.add('recommendation-input');
+                    inputPara.textContent = `Input: ${data.input}`;
+                    recommendationDiv.appendChild(inputPara);
+
+                    const recommendationPara = document.createElement('p');
+                    recommendationPara.classList.add('recommendation-output');
+                    const recommendationText = data.recommendation.Parts.join(" ");
+                    recommendationPara.textContent = `Recommendation: ${recommendationText}`;
+                    recommendationDiv.appendChild(recommendationPara);
+
+                    recommendationsList.appendChild(recommendationDiv);
+                })
+                .catch(error => console.error('Error:', error));
+        });
+        
+        function logout() {
+            window.location.href = '/logout';
+        }
+    </script>
+</body>
+
+</html>
